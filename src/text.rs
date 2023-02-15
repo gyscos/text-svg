@@ -47,35 +47,35 @@ impl Builder<'_> {
 
     pub fn build(&self, font: &Font, text: &str) -> Text {
         let mut d = String::new();
-        let mut x = self.start.x;
 
         let scale = Scale::uniform(self.size);
         let v_metrics = font.v_metrics(scale);
+
+        let mut bounding_box = Rect::default();
 
         for glyph in font.layout(
             text,
             scale,
             Point {
-                x,
+                x: self.start.x,
                 y: self.start.y + v_metrics.ascent,
             },
         ) {
-            let bounding_box = glyph.unpositioned().exact_bounding_box().unwrap();
-            x += bounding_box.min.x;
-
+            // `build_outline` uses coordinates relative to its pixel bounding box.
+            // So offset the actual drawing by this bounding box top/left corner.
+            let bb = glyph.pixel_bounding_box().unwrap();
             glyph.build_outline(&mut crate::Builder {
-                x: x,
-                y: v_metrics.ascent + bounding_box.min.y,
+                x: bb.min.x as f32,
+                y: bb.min.y as f32,
                 d: &mut d,
             });
 
-            x += bounding_box.width() + self.letter_spacing;
+            bounding_box.min.x = f32::min(bounding_box.min.x, bb.min.x as f32);
+            bounding_box.min.y = f32::min(bounding_box.min.y, bb.min.y as f32);
+            bounding_box.max.x = f32::max(bounding_box.max.x, bb.max.x as f32);
+            bounding_box.max.y = f32::max(bounding_box.max.y, bb.max.y as f32);
         }
 
-        let bounding_box = Rect {
-            min: self.start,
-            max: Point { x, y: self.size },
-        };
         Text::new(Path::new().set("d", d).set("fill", "#000"), bounding_box)
     }
 }
