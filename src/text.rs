@@ -51,7 +51,6 @@ impl Builder<'_> {
 
         let scale = Scale::uniform(self.size);
         let v_metrics = font.v_metrics(scale);
-        let glyphs_height = v_metrics.ascent - v_metrics.descent;
 
         for glyph in font.layout(
             text,
@@ -66,7 +65,7 @@ impl Builder<'_> {
 
             glyph.build_outline(&mut crate::Builder {
                 x: x,
-                y: glyphs_height + bounding_box.min.y,
+                y: v_metrics.ascent + bounding_box.min.y,
                 d: &mut d,
             });
 
@@ -75,10 +74,7 @@ impl Builder<'_> {
 
         let bounding_box = Rect {
             min: self.start,
-            max: Point {
-                x,
-                y: glyphs_height,
-            },
+            max: Point { x, y: self.size },
         };
         Text::new(Path::new().set("d", d).set("fill", "#000"), bounding_box)
     }
